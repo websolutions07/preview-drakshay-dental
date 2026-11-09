@@ -2789,24 +2789,29 @@ h4 {
 
 
 
-/* ---------- Our Story Conveyor Section ---------- */
+/* ---------- Our Story / Milestones Section: Horizontal Scroll Pinning ---------- */
 .story-scroll-section {
   position: relative;
   background: #ffffff;
-  padding: 64px 0 28px;
+  width: 100%;
+  overflow: visible;
 }
 
 .story-sticky-container {
   position: relative;
+  width: 100%;
+  min-height: calc(100vh - 68px);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  justify-content: center;
+  padding: 32px 0 24px;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .story-scroll-header {
   text-align: center;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
   flex: none;
 }
 
@@ -2815,60 +2820,29 @@ h4 {
   margin-top: 8px;
 }
 
-.story-scroll-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--gray-500);
-  margin-top: 6px;
-  font-weight: 500;
-}
-
-.story-scroll-hint svg {
-  animation: bounceRight 1.5s infinite;
-}
-
-@keyframes bounceRight {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(5px); }
-}
-
 .story-viewport-outer {
   width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
   position: relative;
-  cursor: grab;
-  scroll-behavior: smooth;
-  padding: 10px 0 16px;
-}
-
-.story-viewport-outer::-webkit-scrollbar {
-  display: none;
-}
-
-.story-viewport-outer:active {
-  cursor: grabbing;
+  touch-action: pan-y;
+  user-select: none;
 }
 
 .story-scroll-track {
   display: flex;
   gap: 28px;
   padding-left: max(24px, calc((100vw - var(--container)) / 2));
-  padding-right: max(40px, calc((100vw - var(--container)) / 2));
+  padding-right: 60px;
   width: max-content;
+  will-change: transform;
 }
 
 .story-progress-indicator {
-  width: 220px;
-  height: 4px;
+  width: 240px;
+  height: 5px;
   background: rgba(14, 30, 61, 0.08);
   border-radius: 999px;
-  margin: 18px auto 0;
+  margin: 24px auto 0;
   overflow: hidden;
   flex: none;
 }
@@ -2878,23 +2852,48 @@ h4 {
   height: 100%;
   background: linear-gradient(90deg, #0d9488, #38bdf8);
   border-radius: 999px;
-  transition: width 0.08s linear;
+  transition: width 0.05s linear;
 }
 
 @media (max-width: 900px) {
-  .story-scroll-section {
-    padding: 44px 0 20px;
-  }
   .story-sticky-container {
-    position: relative;
-    top: 0;
-    height: auto;
-    padding: 0;
+    min-height: calc(100vh - 68px);
+    padding: 24px 0 20px;
+  }
+  .story-scroll-header h2 {
+    font-size: 28px;
   }
   .story-scroll-track {
-    padding-right: 24px;
+    gap: 20px;
+    padding-left: 20px;
+    padding-right: 40px;
+  }
+  .story-progress-indicator {
+    width: 200px;
+    margin-top: 18px;
   }
 }
+
+@media (max-width: 600px) {
+  .story-sticky-container {
+    min-height: calc(100svh - 68px);
+    padding: 16px 0 16px;
+  }
+  .story-scroll-header h2 {
+    font-size: 24px;
+  }
+  .story-scroll-track {
+    gap: 16px;
+    padding-left: 16px;
+    padding-right: 32px;
+  }
+  .stat-card {
+    flex: 0 0 280px;
+    height: 400px;
+    padding: 22px 18px;
+  }
+}
+
 
 
 

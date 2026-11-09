@@ -24,113 +24,105 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 5500);
   }
 
-    /* 3. Our Story / Milestones: Smooth Automatic Gliding on Scroll Across All Devices */
+    /* 3. Our Story / Milestones: Horizontal Scroll Pinning (GSAP ScrollTrigger / Adaptive Sticky Pin) */
   const storyContainer = document.getElementById('story-scroll-container');
+  const storySticky = storyContainer ? storyContainer.querySelector('.story-sticky-container') : null;
   const storyTrack = document.getElementById('story-carousel-track');
   const storyFill = document.getElementById('story-progress-fill');
-  const storyViewport = storyContainer ? storyContainer.querySelector('.story-viewport-outer') : null;
 
-  if (storyContainer && storyViewport && storyTrack) {
-    let currentScroll = 0;
-    let targetScroll = 0;
-    let isUserDragging = false;
-    let dragStartX = 0;
-    let dragStartScroll = 0;
-    let rafId = null;
-
-    // Smooth scroll interpolation loop
-    const animateGlide = () => {
-      if (!isUserDragging) {
-        const diff = targetScroll - currentScroll;
-        if (Math.abs(diff) > 0.5) {
-          currentScroll += diff * 0.22;
-          storyViewport.scrollLeft = currentScroll;
-        } else if (currentScroll !== targetScroll) {
-          currentScroll = targetScroll;
-          storyViewport.scrollLeft = currentScroll;
-        }
-
-        const maxScroll = storyViewport.scrollWidth - storyViewport.clientWidth;
-        if (maxScroll > 0 && storyFill) {
-          const pct = Math.min(100, Math.max(0, (storyViewport.scrollLeft / maxScroll) * 100));
-          storyFill.style.width = `${pct}%`;
-        }
-      }
-      rafId = requestAnimationFrame(animateGlide);
+  if (storyContainer && storyTrack) {
+    // Exact distance needed to move the track horizontally so all cards glide past
+    const getTravelDistance = () => {
+      const trackWidth = storyTrack.scrollWidth;
+      const viewportWidth = window.innerWidth;
+      const paddingRight = window.innerWidth <= 600 ? 32 : (window.innerWidth <= 900 ? 48 : 70);
+      return Math.max(0, trackWidth - viewportWidth + paddingRight);
     };
 
-    // Calculate glide position based on vertical scroll through the section
-    const onPageScroll = () => {
-      if (isUserDragging) return;
-      const rect = storyContainer.getBoundingClientRect();
-      const vh = window.innerHeight || document.documentElement.clientHeight;
+    if (window.gsap && window.ScrollTrigger) {
+      gsap.registerPlugin(ScrollTrigger);
 
-      // Start gliding as section enters view, complete smoothly before leaving view
-      const start = vh * 0.90;
-      const end = -rect.height * 0.20;
-      const totalRange = start - end;
+      // Animation: moves storyTrack horizontally to the left
+      const scrollTween = gsap.to(storyTrack, {
+        x: () => -getTravelDistance(),
+        ease: 'none',
+        paused: true
+      });
 
-      if (totalRange > 0) {
-        let progress = (start - rect.top) / totalRange;
-        progress = Math.max(0, Math.min(1, progress));
-
-        const maxScroll = storyViewport.scrollWidth - storyViewport.clientWidth;
-        if (maxScroll > 0) {
-          targetScroll = progress * maxScroll;
+      // Pin the section when it hits the top (below 68px navbar)
+      ScrollTrigger.create({
+        trigger: storyContainer,
+        start: 'top top+=68',
+        end: () => `+=${Math.round(getTravelDistance() * 1.15)}`,
+        pin: storySticky || storyContainer,
+        pinSpacing: true,
+        animation: scrollTween,
+        scrub: 0.6,
+        anticipatePin: 1,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => {
+          if (storyFill) {
+            storyFill.style.width = `${Math.min(100, Math.max(0, self.progress * 100))}%`;
+          }
         }
-      }
-    };
+      });
 
-    window.addEventListener('scroll', onPageScroll, { passive: true });
-    window.addEventListener('resize', onPageScroll, { passive: true });
+      window.addEventListener('load', () => {
+        ScrollTrigger.refresh();
+      });
+    } else {
+      // High-performance CSS Sticky Pin fallback if GSAP is unavailable
+      let targetProgress = 0;
+      let currentProgress = 0;
+      let isRafRunning = false;
 
-    // Initial positioning
-    currentScroll = storyViewport.scrollLeft || 0;
-    onPageScroll();
-    rafId = requestAnimationFrame(animateGlide);
+      const onStickyScroll = () => {
+        const travel = getTravelDistance();
+        const pinScrollDistance = Math.round(travel * 1.15);
+        const navOffset = 68;
+        const vh = window.innerHeight;
+        const totalHeight = vh - navOffset + pinScrollDistance;
+        storyContainer.style.height = `${totalHeight}px`;
+        if (storySticky) {
+          storySticky.style.position = 'sticky';
+          storySticky.style.top = `${navOffset}px`;
+        }
 
-    // Desktop mouse drag & touch support for direct interaction
-    storyViewport.addEventListener('mousedown', (e) => {
-      isUserDragging = true;
-      dragStartX = e.pageX - storyViewport.offsetLeft;
-      dragStartScroll = storyViewport.scrollLeft;
-      currentScroll = storyViewport.scrollLeft;
-    });
+        const rect = storyContainer.getBoundingClientRect();
+        const scrolled = navOffset - rect.top;
+        if (pinScrollDistance > 0) {
+          targetProgress = Math.max(0, Math.min(1, scrolled / pinScrollDistance));
+        } else {
+          targetProgress = 0;
+        }
 
-    const endDrag = () => {
-      if (isUserDragging) {
-        isUserDragging = false;
-        currentScroll = storyViewport.scrollLeft;
-        targetScroll = storyViewport.scrollLeft;
-      }
-    };
+        if (!isRafRunning) {
+          isRafRunning = true;
+          requestAnimationFrame(updateStickyRender);
+        }
+      };
 
-    window.addEventListener('mouseup', endDrag);
-    storyViewport.addEventListener('mouseleave', endDrag);
+      const updateStickyRender = () => {
+        currentProgress += (targetProgress - currentProgress) * 0.25;
+        if (Math.abs(targetProgress - currentProgress) < 0.001) {
+          currentProgress = targetProgress;
+        }
+        const travel = getTravelDistance();
+        storyTrack.style.transform = `translateX(${-currentProgress * travel}px)`;
+        if (storyFill) {
+          storyFill.style.width = `${currentProgress * 100}%`;
+        }
+        if (currentProgress !== targetProgress) {
+          requestAnimationFrame(updateStickyRender);
+        } else {
+          isRafRunning = false;
+        }
+      };
 
-    storyViewport.addEventListener('mousemove', (e) => {
-      if (!isUserDragging) return;
-      e.preventDefault();
-      const x = e.pageX - storyViewport.offsetLeft;
-      const walk = (x - dragStartX) * 1.5;
-      storyViewport.scrollLeft = dragStartScroll - walk;
-      currentScroll = storyViewport.scrollLeft;
-      targetScroll = storyViewport.scrollLeft;
-    });
-
-    // Touch support: update scroll positions when user directly swipes horizontally
-    storyViewport.addEventListener('touchstart', () => {
-      isUserDragging = true;
-      currentScroll = storyViewport.scrollLeft;
-    }, { passive: true });
-
-    storyViewport.addEventListener('touchend', () => {
-      setTimeout(() => {
-        isUserDragging = false;
-        currentScroll = storyViewport.scrollLeft;
-        targetScroll = storyViewport.scrollLeft;
-      }, 300);
-    }, { passive: true });
+      window.addEventListener('scroll', onStickyScroll, { passive: true });
+      window.addEventListener('resize', onStickyScroll, { passive: true });
+      onStickyScroll();
+    }
   }
 
   /* 4. Dual-Stream Testimonials: Continuous Autonomous Gliding in Opposite Directions */
