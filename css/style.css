@@ -3669,19 +3669,13 @@ h4 {
   }
 }
 
-/* Speed Controls */
-.testi-stream-track.speed-fast {
-  animation-duration: 25s !important;
+/* Continuous Autonomous Gliding: Drift continuously in opposite directions */
+.testi-stream-track.track-right {
+  animation: driftRight 42s linear infinite !important;
 }
 
-.testi-stream-track.speed-slow {
-  animation-duration: 70s !important;
-}
-
-/* Pausing on Lane Hover or Manual Pause */
-.testi-stream-lane:hover .testi-stream-track,
-.testi-stream-track.is-paused {
-  animation-play-state: paused !important;
+.testi-stream-track.track-left {
+  animation: driftLeft 42s linear infinite !important;
 }
 
 /* Individual Testimonial Card Styling */

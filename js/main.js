@@ -24,142 +24,119 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 5500);
   }
 
-  /* 3. Our Story: Smooth Interactive Horizontal Conveyor */
+    /* 3. Our Story / Milestones: Smooth Automatic Gliding on Scroll Across All Devices */
   const storyContainer = document.getElementById('story-scroll-container');
   const storyTrack = document.getElementById('story-carousel-track');
   const storyFill = document.getElementById('story-progress-fill');
   const storyViewport = storyContainer ? storyContainer.querySelector('.story-viewport-outer') : null;
 
-  if (storyContainer) {
-    storyContainer.style.height = '';
-  }
+  if (storyContainer && storyViewport && storyTrack) {
+    let currentScroll = 0;
+    let targetScroll = 0;
+    let isUserDragging = false;
+    let dragStartX = 0;
+    let dragStartScroll = 0;
+    let rafId = null;
 
-  if (storyViewport && storyTrack) {
-    storyTrack.style.transform = 'none';
+    // Smooth scroll interpolation loop
+    const animateGlide = () => {
+      if (!isUserDragging) {
+        const diff = targetScroll - currentScroll;
+        if (Math.abs(diff) > 0.5) {
+          currentScroll += diff * 0.22;
+          storyViewport.scrollLeft = currentScroll;
+        } else if (currentScroll !== targetScroll) {
+          currentScroll = targetScroll;
+          storyViewport.scrollLeft = currentScroll;
+        }
 
-    // Update progress indicator based on horizontal scroll
-    const updateStoryProgress = () => {
-      const maxScroll = storyViewport.scrollWidth - storyViewport.clientWidth;
-      if (maxScroll > 0 && storyFill) {
-        const pct = Math.min(100, Math.max(0, (storyViewport.scrollLeft / maxScroll) * 100));
-        storyFill.style.width = `${pct}%`;
+        const maxScroll = storyViewport.scrollWidth - storyViewport.clientWidth;
+        if (maxScroll > 0 && storyFill) {
+          const pct = Math.min(100, Math.max(0, (storyViewport.scrollLeft / maxScroll) * 100));
+          storyFill.style.width = `${pct}%`;
+        }
+      }
+      rafId = requestAnimationFrame(animateGlide);
+    };
+
+    // Calculate glide position based on vertical scroll through the section
+    const onPageScroll = () => {
+      if (isUserDragging) return;
+      const rect = storyContainer.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+
+      // Start gliding as section enters view, complete smoothly before leaving view
+      const start = vh * 0.90;
+      const end = -rect.height * 0.20;
+      const totalRange = start - end;
+
+      if (totalRange > 0) {
+        let progress = (start - rect.top) / totalRange;
+        progress = Math.max(0, Math.min(1, progress));
+
+        const maxScroll = storyViewport.scrollWidth - storyViewport.clientWidth;
+        if (maxScroll > 0) {
+          targetScroll = progress * maxScroll;
+        }
       }
     };
 
-    storyViewport.addEventListener('scroll', updateStoryProgress, { passive: true });
-    window.addEventListener('resize', updateStoryProgress, { passive: true });
-    updateStoryProgress();
+    window.addEventListener('scroll', onPageScroll, { passive: true });
+    window.addEventListener('resize', onPageScroll, { passive: true });
 
-    // Mouse drag-to-scroll on desktop
-    let isDown = false;
-    let startX = 0;
-    let scrollLeft = 0;
+    // Initial positioning
+    currentScroll = storyViewport.scrollLeft || 0;
+    onPageScroll();
+    rafId = requestAnimationFrame(animateGlide);
 
+    // Desktop mouse drag & touch support for direct interaction
     storyViewport.addEventListener('mousedown', (e) => {
-      isDown = true;
-      startX = e.pageX - storyViewport.offsetLeft;
-      scrollLeft = storyViewport.scrollLeft;
+      isUserDragging = true;
+      dragStartX = e.pageX - storyViewport.offsetLeft;
+      dragStartScroll = storyViewport.scrollLeft;
+      currentScroll = storyViewport.scrollLeft;
     });
 
-    const stopDrag = () => {
-      isDown = false;
+    const endDrag = () => {
+      if (isUserDragging) {
+        isUserDragging = false;
+        currentScroll = storyViewport.scrollLeft;
+        targetScroll = storyViewport.scrollLeft;
+      }
     };
 
-    window.addEventListener('mouseup', stopDrag);
-    storyViewport.addEventListener('mouseleave', stopDrag);
+    window.addEventListener('mouseup', endDrag);
+    storyViewport.addEventListener('mouseleave', endDrag);
 
     storyViewport.addEventListener('mousemove', (e) => {
-      if (!isDown) return;
+      if (!isUserDragging) return;
       e.preventDefault();
       const x = e.pageX - storyViewport.offsetLeft;
-      const walk = (x - startX) * 1.6;
-      storyViewport.scrollLeft = scrollLeft - walk;
+      const walk = (x - dragStartX) * 1.5;
+      storyViewport.scrollLeft = dragStartScroll - walk;
+      currentScroll = storyViewport.scrollLeft;
+      targetScroll = storyViewport.scrollLeft;
     });
 
-    // Horizontal wheel conversion when cursor is over the cards
-    storyViewport.addEventListener('wheel', (e) => {
-      if (Math.abs(e.deltaX) < Math.abs(e.deltaY) && Math.abs(e.deltaY) > 6) {
-        const maxScroll = storyViewport.scrollWidth - storyViewport.clientWidth;
-        if ((e.deltaY > 0 && storyViewport.scrollLeft < maxScroll - 2) ||
-            (e.deltaY < 0 && storyViewport.scrollLeft > 2)) {
-          storyViewport.scrollLeft += e.deltaY;
-          e.preventDefault();
-        }
-      }
-    }, { passive: false });
+    // Touch support: update scroll positions when user directly swipes horizontally
+    storyViewport.addEventListener('touchstart', () => {
+      isUserDragging = true;
+      currentScroll = storyViewport.scrollLeft;
+    }, { passive: true });
+
+    storyViewport.addEventListener('touchend', () => {
+      setTimeout(() => {
+        isUserDragging = false;
+        currentScroll = storyViewport.scrollLeft;
+        targetScroll = storyViewport.scrollLeft;
+      }, 300);
+    }, { passive: true });
   }
 
-  /* 4. Dual-Stream 10 Patient Testimonials Marquee & Interactive Controller */
-  const testiMotionToggle = document.getElementById('testi-motion-toggle');
-  const testiMotionIcon = document.getElementById('testi-motion-icon');
-  const testiMotionText = document.getElementById('testi-motion-text');
-  const testiSpeedToggle = document.getElementById('testi-speed-toggle');
-  const testiSpeedText = document.getElementById('testi-speed-text');
-  const streamTracks = document.querySelectorAll('.testi-stream-track');
-  const streamCards = document.querySelectorAll('.testi-stream-card');
-
-  if (streamTracks.length > 0) {
-    let isMotionPaused = false;
-
-    // Toggle Pause/Play
-    const toggleMotion = () => {
-      isMotionPaused = !isMotionPaused;
-      streamTracks.forEach((track) => {
-        track.classList.toggle('is-paused', isMotionPaused);
-      });
-      if (testiMotionIcon && testiMotionText) {
-        testiMotionIcon.textContent = isMotionPaused ? '▶' : '⏸';
-        testiMotionText.textContent = isMotionPaused ? 'Resume Motion' : 'Pause Motion';
-      }
-    };
-
-    testiMotionToggle?.addEventListener('click', toggleMotion);
-
-    // Toggle Speed (Normal -> Fast -> Gentle/Slow -> Normal)
-    const speeds = [
-      { key: 'normal', label: 'Speed: Normal', class: '' },
-      { key: 'fast', label: 'Speed: Fast', class: 'speed-fast' },
-      { key: 'slow', label: 'Speed: Gentle', class: 'speed-slow' },
-    ];
-    let speedIdx = 0;
-
-    testiSpeedToggle?.addEventListener('click', () => {
-      speedIdx = (speedIdx + 1) % speeds.length;
-      const nextSpeed = speeds[speedIdx];
-      streamTracks.forEach((track) => {
-        track.classList.remove('speed-fast', 'speed-slow');
-        if (nextSpeed.class) track.classList.add(nextSpeed.class);
-      });
-      if (testiSpeedText) testiSpeedText.textContent = nextSpeed.label;
-    });
-
-    // Touch & Keyboard accessibility on mobile / touchscreens
-    streamCards.forEach((card) => {
-      // Tap to freeze on touch devices
-      card.addEventListener('touchstart', () => {
-        streamTracks.forEach((t) => t.classList.add('is-paused'));
-      }, { passive: true });
-
-      // Highlight on focus/click
-      card.addEventListener('focus', () => {
-        streamTracks.forEach((t) => t.classList.add('is-paused'));
-      });
-      card.addEventListener('blur', () => {
-        if (!isMotionPaused) {
-          streamTracks.forEach((t) => t.classList.remove('is-paused'));
-        }
-      });
-    });
-
-    // Spacebar to pause/resume if focused on card
-    const testiSection = document.getElementById('testimonials');
-    testiSection?.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && e.target.classList.contains('testi-stream-card')) {
-        e.preventDefault();
-        toggleMotion();
-      }
-    });
-  }
+  /* 4. Dual-Stream Testimonials: Continuous Autonomous Gliding in Opposite Directions */
+  // Top row (track-right) glides continuously to the right
+  // Bottom row (track-left) glides continuously to the left
+  // Runs 100% autonomously via CSS keyframes with zero required user interaction
 
   /* 5. Mobile Navigation Drawer */
   const mobileToggle = document.getElementById('mobile-toggle');
